@@ -58,5 +58,30 @@ def CardinalSplineCalculations(order):
 def CardinalSplineMatrix(order):
     return flip(CardinalSplineCalculations(order)[:-1,-1,:-1].transpose(),1)
 
+def ScaledSplineMatrix(order):
+    from sympy import Symbol,Matrix,poly,expand
+    #This paper returns the correct coefficients, but they're more convenient 
+    #for my use when scaled differently, in particular I use the form:
+    #
+    #                                         [P0]                                       
+    #                                         [P1]                                      
+    #  [1 t t**2 t**3 ... t**n] * (1/c) * B * [P2]                                      
+    #                                         [...]                         
+    #                                         [Pn]             
+    #
+    # such that t is the parameter in [0,1], B is the matrix I want, and Pn 
+    # are the control points.  This function is my shortcut to get what I 
+    # need to use directly in this equation
+    t = Symbol('t')
+    T = [t**i for i in reversed(range(0,n))]
+    polynomials = Matrix(CardinalSplineMatrix(n)) * Matrix(T)
+    scaled_polynomials = [poly(expand(i.subs(t,t+j)),t) for j,i in enumerate(polynomials)]
+    const_coeff = poly(polynomials[0]).all_coeffs()[0]
+    return (flip(array([[j/const_coeff for j in poly(i,t).all_coeffs()] for i in scaled_polynomials])).transpose(),Rational(const_coeff))
+
 if __name__ == '__main__':
-    print(CardinalSplineMatrix(13))
+    n = 13
+    print(CardinalSplineMatrix(n))
+    B,const = ScaledSplineMatrix(n)
+    print(B)
+    print(const)
